@@ -25,8 +25,15 @@
 
 /**********************************************************************************************************************************************************/
 
-typedef enum ports_t {IN, OUT_1, IN_VOL, PARAM1, PARAM2, MASTER, BYPASS, PLUGIN_CONTROL, PLUGIN_NOTIFY, IN_LPF, IN_LPF_BYP, PLUGIN_PORT_COUNT} ports;
-typedef enum rnn_types_t {LSTM_16, LSTM_12, GRU_12, GRU_8} rnn_types;
+typedef enum {
+    IN, OUT_1, PLUGIN_CONTROL, PLUGIN_NOTIFY,
+    IN_LPF, PREGAIN,
+    NET_BYPASS, PARAM1, PARAM2,
+    EQ_BYPASS, EQ_POS, BASS, BFREQ, MID, MFREQ, MIDQ, MTYPE, TREBLE, TFREQ,
+    MASTER,
+    PLUGIN_PORT_COUNT} ports_t;
+
+typedef enum {LSTM_16, LSTM_12, GRU_12, GRU_8} rnn_t;
 
 #define PROCESS_ATOM_MESSAGES
 typedef struct {
@@ -36,6 +43,10 @@ typedef struct {
 
 /* Define a macro for converting a gain in dB to a coefficient */
 #define DB_CO(g) ((g) > -90.0f ? powf(10.0f, (g) * 0.05f) : 0.0f)
+
+/* Defines for tone controls */
+#define PEAK 0.0f
+#define BANDPASS 1.0f
 
 /**********************************************************************************************************************************************************/
 
@@ -53,16 +64,34 @@ public:
     static const void* extension_data(const char* uri);
     float *in;
     float *out_1;
-    float *in_vol_db;
-    float in_vol_old;
+    float *pregain_db;
+    float pregain_old;
     float *param1;
     float *param2;
     float *master_db;
     float master_old;
-    float *bypass;
+    float *net_bypass;
     float *in_lpf_f;
     float in_lpf_f_old;
-    float *in_lpf_bypass;
+    /* Eq section */
+    float *eq_position;
+    float *bass_boost_db;
+    float bass_boost_db_old;
+    float *bass_freq;
+    float bass_freq_old;
+    float *mid_boost_db;
+    float mid_boost_db_old;
+    float *mid_freq;
+    float mid_freq_old;
+    float *mid_q;
+    float mid_q_old;
+    float *mid_type;
+    float mid_type_old;
+    float *treble_boost_db;
+    float treble_boost_db_old;
+    float *treble_freq;
+    float treble_freq_old;
+    float *eq_bypass;
 
     static LV2_State_Status restore(LV2_Handle instance,
                                        LV2_State_Retrieve_Function retrieve,
@@ -129,6 +158,9 @@ private:
 
     Biquad *dc_blocker;
     Biquad *in_lpf;
+    Biquad *bass;
+    Biquad *mid;
+    Biquad *treble;
 
     /* Static: only json files containing models below will be loaded */
     RTNeural::ModelT<float, 1, 1,
@@ -159,4 +191,5 @@ private:
     static void applyModel(float *out, const float *in, LV2_Handle instance, uint32_t n_samples);
     static void applyModel(float *out, const float *in, float param1, LV2_Handle instance, uint32_t n_samples);
     static void applyModel(float *out, const float *in, float param1, float param2, LV2_Handle instance, uint32_t n_samples);
+    static void applyToneControls(float *out, const float *in, LV2_Handle instance, uint32_t n_samples);
 };
